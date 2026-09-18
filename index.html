@@ -31,6 +31,8 @@
       border-radius: 8px;
     }
   </style>
+  <!-- Classic Three.js (works when you just open the file) -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 </head>
 <body>
   <div id="ui">
@@ -43,22 +45,10 @@
     A / ← Turn left &nbsp;&nbsp; D / → Turn right
   </div>
 
-  <script type="importmap">
-  {
-    "imports": {
-      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-    }
-  }
-  </script>
-
-  <script type="module">
-    import * as THREE from 'three';
-    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-
+  <script>
     // ========== SCENE SETUP ==========
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x87CEEB); // sky blue
+    scene.background = new THREE.Color(0x87CEEB);
     scene.fog = new THREE.Fog(0x87CEEB, 50, 400);
 
     const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -92,15 +82,14 @@
     const oceanMat = new THREE.MeshStandardMaterial({
       color: 0x1a6b9a,
       roughness: 0.3,
-      metalness: 0.1,
-      flatShading: false
+      metalness: 0.1
     });
     const ocean = new THREE.Mesh(oceanGeo, oceanMat);
     ocean.rotation.x = -Math.PI / 2;
     ocean.receiveShadow = true;
     scene.add(ocean);
 
-    // Simple wave animation by moving vertices
+    // Wave data
     const positions = oceanGeo.attributes.position;
     const originalY = new Float32Array(positions.count);
     for (let i = 0; i < positions.count; i++) {
@@ -163,11 +152,11 @@
     ship.position.set(0, 0.3, 0);
     scene.add(ship);
 
-    // ========== A FEW ISLANDS ==========
-    function createIsland(x, z, scale = 1) {
+    // ========== ISLANDS ==========
+    function createIsland(x, z, scale) {
+      scale = scale || 1;
       const group = new THREE.Group();
 
-      // Base rock/island
       const islandGeo = new THREE.ConeGeometry(6 * scale, 3 * scale, 6);
       const islandMat = new THREE.MeshStandardMaterial({ color: 0x4a7c3f, flatShading: true });
       const island = new THREE.Mesh(islandGeo, islandMat);
@@ -176,7 +165,6 @@
       island.receiveShadow = true;
       group.add(island);
 
-      // Simple palm-like trees
       for (let i = 0; i < 3; i++) {
         const trunk = new THREE.Mesh(
           new THREE.CylinderGeometry(0.15, 0.2, 2.5, 5),
@@ -211,15 +199,14 @@
 
     // ========== CONTROLS ==========
     const keys = {};
-    window.addEventListener('keydown', (e) => { keys[e.code] = true; });
-    window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+    window.addEventListener('keydown', function(e) { keys[e.code] = true; });
+    window.addEventListener('keyup', function(e) { keys[e.code] = false; });
 
     let shipSpeed = 0;
     const maxSpeed = 0.35;
     const acceleration = 0.008;
     const turnSpeed = 0.025;
 
-    // Camera offset (third person)
     const cameraOffset = new THREE.Vector3(0, 10, 18);
 
     // ========== ANIMATION LOOP ==========
@@ -229,7 +216,7 @@
       requestAnimationFrame(animate);
       const t = clock.getElapsedTime();
 
-      // Wave animation
+      // Waves
       for (let i = 0; i < positions.count; i++) {
         const x = positions.getX(i);
         const z = positions.getZ(i);
@@ -246,7 +233,6 @@
       } else if (keys['KeyS'] || keys['ArrowDown']) {
         shipSpeed = Math.max(shipSpeed - acceleration, -maxSpeed * 0.5);
       } else {
-        // Friction
         shipSpeed *= 0.98;
         if (Math.abs(shipSpeed) < 0.001) shipSpeed = 0;
       }
@@ -258,14 +244,11 @@
         ship.rotation.y -= turnSpeed * (shipSpeed >= 0 ? 1 : -1);
       }
 
-      // Move ship forward relative to its rotation
       const direction = new THREE.Vector3(0, 0, -1).applyQuaternion(ship.quaternion);
       ship.position.add(direction.multiplyScalar(shipSpeed));
 
-      // Keep ship roughly on water surface (simple bob)
+      // Bobbing
       ship.position.y = 0.4 + Math.sin(t * 2.5) * 0.15;
-
-      // Gentle roll
       ship.rotation.z = Math.sin(t * 1.8) * 0.03;
 
       // Camera follow
@@ -280,8 +263,8 @@
 
     animate();
 
-    // Handle resize
-    window.addEventListener('resize', () => {
+    // Resize
+    window.addEventListener('resize', function() {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
